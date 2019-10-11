@@ -1,6 +1,6 @@
-# PyLink 2.1-alpha2 (*UNRELEASED*)
+# PyLink 2.1-alpha2 (2019-07-14)
 
-**PyLink now requires Python 3.5 or later!**
+**PyLink now requires Python 3.6 or later!**
 
 This release includes all changes from PyLink 2.0.3, plus the following:
 

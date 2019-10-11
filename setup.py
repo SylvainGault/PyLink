@@ -4,8 +4,8 @@ import subprocess
 import sys
 from codecs import open
 
-if sys.version_info < (3, 4):
-    raise RuntimeError("PyLink requires Python 3.4 or higher.")
+if sys.version_info < (3, 6):
+    raise RuntimeError("PyLink requires Python 3.6 or higher.")
 
 try:
     from setuptools import setup, find_packages
@@ -76,7 +76,6 @@ setup(
         'Natural Language :: English',
 
         'Programming Language :: Python :: 3 :: Only',
-        'Programming Language :: Python :: 3.5',
         'Programming Language :: Python :: 3.6',
         'Programming Language :: Python :: 3.7',
     ],
