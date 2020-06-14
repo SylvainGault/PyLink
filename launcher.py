@@ -21,7 +21,7 @@ def _main():
     conf.load_conf(args.config)
 
     from pylinkirc.log import log
-    from pylinkirc import classes, utils, coremods, selectdriver
+    from pylinkirc import classes, utils, coremods, eventloop
 
     # Write and check for an existing PID file unless specifically told not to.
     if not args.no_pid:
@@ -163,7 +163,7 @@ def _main():
 
     world.started.set()
     log.info("Loaded plugins: %s", ', '.join(sorted(world.plugins.keys())))
-    selectdriver.start()
+    eventloop.start()
 
 def main():
     import argparse

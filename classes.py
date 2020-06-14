@@ -21,7 +21,7 @@ import textwrap
 import threading
 import time
 
-from . import __version__, conf, selectdriver, structures, utils, world
+from . import __version__, conf, eventloop, structures, utils, world
 from .log import log, PyLinkChannelLogger
 from .utils import ProtocolError  # Compatibility with PyLink 1.x
 
@@ -1907,7 +1907,7 @@ class IRCNetwork(PyLinkNetworkCoreWithUtils):
             # Make sure future reads never block, since select doesn't always guarantee this.
             self._socket.setblocking(False)
 
-            selectdriver.register(self)
+            eventloop.register(self)
 
             if self.ssl:
                 self._verify_ssl()
@@ -1966,7 +1966,7 @@ class IRCNetwork(PyLinkNetworkCoreWithUtils):
 
         if self._socket is not None:
             try:
-                selectdriver.unregister(self)
+                eventloop.unregister(self)
             except KeyError:
                 pass
             try:

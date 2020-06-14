@@ -38,7 +38,7 @@ def register(irc):
     """
     Registers a network to the asyncio event loop.
     """
-    log.debug('selectdriver: registering %s for network %s', irc._socket, irc.name)
+    log.debug('eventloop: registering %s for network %s', irc._socket, irc.name)
     loop.add_reader(irc._socket, _process_conn, irc)
 
 def unregister(irc):
@@ -46,10 +46,10 @@ def unregister(irc):
     Removes a network from the asyncio event loop.
     """
     if irc._socket.fileno() != -1:
-        log.debug('selectdriver: de-registering %s for network %s', irc._socket, irc.name)
+        log.debug('eventloop: de-registering %s for network %s', irc._socket, irc.name)
         loop.remove_reader(irc._socket)
     else:
-        log.debug('selectdriver: skipping de-registering %s for network %s', irc._socket, irc.name)
+        log.debug('eventloop: skipping de-registering %s for network %s', irc._socket, irc.name)
 
 def start():
     """
