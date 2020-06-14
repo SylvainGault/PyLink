@@ -1,9 +1,8 @@
 """
-Socket handling driver using the selectors module. epoll, kqueue, and devpoll
-are used internally when available.
+Network streams handling driver using the asyncio module.
 """
 
-import selectors
+import asyncio
 import threading
 
 from pylinkirc import world
@@ -14,41 +13,47 @@ __all__ = ['register', 'unregister', 'start']
 
 SELECT_TIMEOUT = 0.5
 
-selector = selectors.DefaultSelector()
-
-def _process_conns():
-    """Main loop which processes connected sockets."""
-
+loop = asyncio.get_event_loop()
+async def _monitor_world():
+    """
+    Stop the event loop when the world is shutting down.
+    """
     while not world.shutting_down.is_set():
-        for socketkey, mask in selector.select(timeout=SELECT_TIMEOUT):
-            irc = socketkey.data
-            try:
-                if mask & selectors.EVENT_READ and not irc._aborted.is_set():
-                    irc._run_irc()
-            except:
-                log.exception('Error in select driver loop:')
-                continue
+        await asyncio.sleep(SELECT_TIMEOUT)
+
+    loop.stop()
+
+def _process_conn(irc):
+    """
+    Callback for when some data is available on a given socket.
+    """
+    try:
+        if not irc._aborted.is_set():
+            t = threading.Thread(target=irc._run_irc, name="_run_irc for %s" % irc.name)
+            t.start()
+    except:
+        log.exception('Error in network event loop:')
 
 def register(irc):
     """
-    Registers a network to the global selectors instance.
+    Registers a network to the asyncio event loop.
     """
     log.debug('selectdriver: registering %s for network %s', irc._socket, irc.name)
-    selector.register(irc._socket, selectors.EVENT_READ, data=irc)
+    loop.add_reader(irc._socket, _process_conn, irc)
 
 def unregister(irc):
     """
-    Removes a network from the global selectors instance.
+    Removes a network from the asyncio event loop.
     """
     if irc._socket.fileno() != -1:
         log.debug('selectdriver: de-registering %s for network %s', irc._socket, irc.name)
-        selector.unregister(irc._socket)
+        loop.remove_reader(irc._socket)
     else:
         log.debug('selectdriver: skipping de-registering %s for network %s', irc._socket, irc.name)
 
 def start():
     """
-    Starts a thread to process connections.
+    Starts the event loop.
     """
-    t = threading.Thread(target=_process_conns, name="Selector driver loop")
-    t.start()
+    asyncio.ensure_future(_monitor_world(), loop=loop)
+    loop.run_forever()
