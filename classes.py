@@ -1725,7 +1725,7 @@ class IRCNetwork(PyLinkNetworkCoreWithUtils):
         self._socket = None
         self._buffer = bytearray()
         self._reconnect_thread = None
-        self._queue_thread = None
+        self._queue_task = None
 
     def _init_vars(self, *args, **kwargs):
         super()._init_vars(*args, **kwargs)
@@ -1912,9 +1912,8 @@ class IRCNetwork(PyLinkNetworkCoreWithUtils):
             if self.ssl:
                 self._verify_ssl()
 
-            self._queue_thread = threading.Thread(name="Queue thread for %s" % self.name,
-                                                 target=self._process_queue, daemon=True)
-            self._queue_thread.start()
+            self._queue_task = eventloop.create_task(self._process_queue(),
+                                                     name="Queue task for %s" % self.name)
 
             self.sid = self.serverdata.get("sid")
             # All our checks passed, get the protocol module to connect and run the listen
@@ -1977,7 +1976,7 @@ class IRCNetwork(PyLinkNetworkCoreWithUtils):
 
             log.debug('(%s) disconnect: waiting for write half of socket %s to shutdown', self.name, self._socket)
             # Wait for the write half to shut down when applicable.
-            if self._queue_thread is None or self._aborted_send.wait(10):
+            if self._queue_task is None or self._aborted_send.wait(10):
                 log.debug('(%s) disconnect: closing socket %s', self.name, self._socket)
                 self._socket.close()
 
@@ -2114,12 +2113,12 @@ class IRCNetwork(PyLinkNetworkCoreWithUtils):
         else:
             self._send(data)
 
-    def _process_queue(self):
+    async def _process_queue(self):
         """Loop to process outgoing queue data."""
         while True:
             throttle_time = self.serverdata.get('throttle_time', 0)
-            if not self._aborted.wait(throttle_time):
-                data = self._queue.get()
+            if not await eventloop.to_thread(self._aborted.wait, throttle_time):
+                data = await eventloop.to_thread(self._queue.get)
                 if data is None:
                     log.debug('(%s) Stopping queue thread due to getting None as item', self.name)
                     break
