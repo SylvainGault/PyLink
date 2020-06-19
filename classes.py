@@ -1848,7 +1848,7 @@ class IRCNetwork(PyLinkNetworkCoreWithUtils):
                          ' option in your server block.', self.name,
                          hashtype, fp)
 
-    def _connect(self):
+    async def _connect(self):
         """
         Connects to the network.
         """
@@ -1893,7 +1893,7 @@ class IRCNetwork(PyLinkNetworkCoreWithUtils):
             self._socket.settimeout(self.pingfreq)
 
             # Start the actual connection
-            self._socket.connect((ip, port))
+            await eventloop.to_thread(self._socket.connect, (ip, port))
 
             if self not in world.networkobjects.values():
                 log.debug("(%s) _connect: disconnecting socket %s as the network was removed",
@@ -1918,7 +1918,7 @@ class IRCNetwork(PyLinkNetworkCoreWithUtils):
             self.sid = self.serverdata.get("sid")
             # All our checks passed, get the protocol module to connect and run the listen
             # loop. This also updates any SID values should the protocol module do so.
-            self.post_connect()
+            await eventloop.to_thread(self.post_connect)
 
             log.info('(%s) Enumerating our own SID %s', self.name, self.sid)
             host = self.hostname()
@@ -1928,7 +1928,7 @@ class IRCNetwork(PyLinkNetworkCoreWithUtils):
                                             or conf.conf['pylink']['serverdesc'])
 
             log.info('(%s) Starting ping schedulers....', self.name)
-            self._schedule_ping()
+            await eventloop.to_thread(self._schedule_ping)
             log.info('(%s) Server ready; listening for data.', self.name)
             self.autoconnect_active_multiplier = 1  # Reset any extra autoconnect delays
 
@@ -1936,16 +1936,13 @@ class IRCNetwork(PyLinkNetworkCoreWithUtils):
         except:
             self._log_connection_error('(%s) Disconnected from IRC:', self.name, exc_info=True)
             if not self._aborted.is_set():
-                self.disconnect()
+                await eventloop.to_thread(self.disconnect)
 
     def connect(self):
         """
         Starts a thread to connect the network.
         """
-        connect_thread = threading.Thread(target=self._connect, daemon=True,
-                                          name="Connect thread for %s" %
-                                          self.name)
-        connect_thread.start()
+        eventloop.create_task(self._connect(), name="Connect task for %s" % self.name)
 
     def disconnect(self):
         """Handle disconnects from the remote server."""
