@@ -1991,20 +1991,19 @@ class IRCNetwork(PyLinkNetworkCoreWithUtils):
 
     def _start_reconnect(self):
         """Schedules a reconnection to the network."""
-        def _reconnect():
+        async def _reconnect():
             # _run_autoconnect() will block and return True after the autoconnect
             # delay has passed, if autoconnect is disabled. We do not want it to
             # block whatever is calling disconnect() though, so we run it in a new
             # thread.
-            if self._run_autoconnect():
+            if await eventloop.to_thread(self._run_autoconnect):
                 self.connect()
 
         if self not in world.networkobjects.values():
             log.debug('(%s) _start_reconnect: Stopping reconnect timer as the network was removed', self.name)
             return
         elif self._reconnect_thread is None or not self._reconnect_thread.is_alive():
-            self._reconnect_thread = threading.Thread(target=_reconnect, name="Reconnecting network %s" % self.name)
-            self._reconnect_thread.start()
+            eventloop.create_task(_reconnect(), name="Reconnecting network %s" % self.name)
         else:
             log.debug('(%s) Ignoring attempt to reschedule reconnect as one is in progress.', self.name)
 
