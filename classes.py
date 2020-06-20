@@ -1737,9 +1737,9 @@ class IRCNetwork(PyLinkNetworkCoreWithUtils):
         self.maxsendq = self.serverdata.get('maxsendq', 4096)
         self._queue = queue.Queue(self.maxsendq)
 
-    def _schedule_ping(self):
+    async def _schedule_ping(self):
         """Schedules periodic pings in a loop."""
-        self._ping_uplink()
+        await eventloop.to_thread(self._ping_uplink)
 
         if self._aborted.is_set():
             return
@@ -1747,13 +1747,12 @@ class IRCNetwork(PyLinkNetworkCoreWithUtils):
         elapsed = time.time() - self.lastping
         if elapsed > (self.pingfreq * KEEPALIVE_MAX_MISSED):
             log.error('(%s) Disconnected from IRC: Ping timeout (%d secs)', self.name, elapsed)
-            self.disconnect()
+            await eventloop.to_thread(self.disconnect)
             return
 
-        self._ping_timer = threading.Timer(self.pingfreq, self._schedule_ping)
-        self._ping_timer.daemon = True
-        self._ping_timer.name = 'Ping timer loop for %s' % self.name
-        self._ping_timer.start()
+        name = 'Ping timer loop for %s' % self.name
+        task = eventloop.create_delayed_task(self._schedule_ping(), self.pingfreq, name=name)
+        self._ping_timer = task
 
         log.debug('(%s) Ping scheduled at %s', self.name, time.time())
 
@@ -1928,7 +1927,7 @@ class IRCNetwork(PyLinkNetworkCoreWithUtils):
                                             or conf.conf['pylink']['serverdesc'])
 
             log.info('(%s) Starting ping schedulers....', self.name)
-            await eventloop.to_thread(self._schedule_ping)
+            await self._schedule_ping()
             log.info('(%s) Server ready; listening for data.', self.name)
             self.autoconnect_active_multiplier = 1  # Reset any extra autoconnect delays
 
