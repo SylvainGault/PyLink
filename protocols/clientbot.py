@@ -270,12 +270,13 @@ class ClientbotWrapperProtocol(ClientbotBaseProtocol, IRCCommonProtocol):
 
         # Start a timer to call CAP END if registration freezes (e.g. if AUTHENTICATE for SASL is
         # never replied to).
-        def _do_cap_end_wrapper():
+        async def _do_cap_end_wrapper():
             log.info('(%s) Skipping SASL due to timeout; are the IRCd and services configured '
                      'properly?', self.name)
-            self._do_cap_end()
-        self._cap_timer = threading.Timer(self.serverdata.get('sasl_timeout') or 15, _do_cap_end_wrapper)
-        self._cap_timer.start()
+            await eventloop.to_thread(self._do_cap_end)
+
+        sasl_timeout = self.serverdata.get('sasl_timeout') or 15
+        self._cap_timer = eventloop.create_delayed_task(_do_cap_end_wrapper(), sasl_timeout)
 
         # Log in to IRC and set our irc.pseudoclient object.
         sbot = world.services['pylink']
