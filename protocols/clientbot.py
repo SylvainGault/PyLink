@@ -8,7 +8,6 @@ clientbot.py: Clientbot (regular IRC bot) protocol module for PyLink.
 
 import base64
 import string
-import threading
 import time
 
 from pylinkirc import utils, world
@@ -330,14 +329,15 @@ class ClientbotWrapperProtocol(ClientbotBaseProtocol, IRCCommonProtocol):
         # Don't update our state here: wait for the IRCd to send an acknowledgement instead.
         # There is essentially a 3 second wait to do this, as we send NAMES with a delay
         # to resync any users lost due to kicks being blocked, etc.
-        if (channel not in self.kick_queue) or (not self.kick_queue[channel][1].is_alive()):
+        if (channel not in self.kick_queue) or (not self.kick_queue[channel][1].done()):
+            async def send_names():
+                await self.asend('NAMES %s' % channel)
             # However, only do this if there isn't a NAMES request scheduled already.
-            t = threading.Timer(3, lambda: self.send('NAMES %s' % channel))
+            t = eventloop.create_delayed_task(send_names(), 3)
             log.debug('(%s) kick: setting NAMES timer for %s on %s', self.name, target, channel)
 
             # Store the channel, target UID, and timer object in the internal kick queue.
             self.kick_queue[channel] = ({target}, t)
-            t.start()
         else:
             log.debug('(%s) kick: adding %s to kick queue for channel %s', self.name, target, channel)
             self.kick_queue[channel][0].add(target)
