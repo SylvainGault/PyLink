@@ -13,7 +13,7 @@ import string
 import threading
 from copy import copy, deepcopy
 
-from . import conf
+from . import conf, eventloop
 from .log import log
 
 __all__ = ['KeyedDefaultdict', 'CopyWrapper', 'CaseInsensitiveFixedSet',
@@ -235,7 +235,7 @@ class DataStore:
 
         if self.save_frequency > 0:
             # If autosaving is enabled, start the save_callback loop.
-            self.save_callback(starting=True)
+            eventloop.create_task(self.save_callback(starting=True))
 
     def load(self):
         """
@@ -244,16 +244,16 @@ class DataStore:
         """
         raise NotImplementedError
 
-    def save_callback(self, starting=False):
+    async def save_callback(self, starting=False):
         """Start the DB save loop."""
         # don't actually save the first time
         if not starting:
-            self.save()
+            await eventloop.to_thread(self.save)
 
         # schedule saving in a loop.
-        self.exportdb_timer = threading.Timer(self.save_frequency, self.save_callback)
-        self.exportdb_timer.name = 'DataStore {} save_callback loop'.format(self.name)
-        self.exportdb_timer.start()
+        name = 'DataStore {} save_callback loop'.format(self.name)
+        task = eventloop.create_delayed_task(self.save_callback(), self.save_frequency, name=name)
+        self.exportdb_timer = task
 
     def save(self):
         """
