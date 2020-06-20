@@ -8,7 +8,7 @@ import threading
 from pylinkirc import world
 from pylinkirc.log import log
 
-__all__ = ['register', 'unregister', 'start']
+__all__ = ['register', 'unregister', 'start', 'create_task', 'to_thread']
 
 
 SELECT_TIMEOUT = 0.5
@@ -57,3 +57,20 @@ def start():
     """
     asyncio.ensure_future(_monitor_world(), loop=loop)
     loop.run_forever()
+
+def create_task(coro, name=None):
+    """
+    Create a new task from a coroutine and schedule it for future execution in
+    the event loop. Return immediately.
+    """
+    return asyncio.run_coroutine_threadsafe(coro, loop)
+
+async def to_thread(func, *args, **kwargs):
+    """
+    Calls func(*args) in a thread and await for the result.
+    """
+    # This intermediate function is only used to create a closure because
+    # run_in_executor doesn't support kwargs.
+    def wrap():
+        return func(*args, **kwargs)
+    return await loop.run_in_executor(None, wrap)
