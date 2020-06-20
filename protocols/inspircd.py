@@ -2,10 +2,9 @@
 inspircd.py: InspIRCd 2.0, 3.x protocol module for PyLink.
 """
 
-import threading
 import time
 
-from pylinkirc import conf
+from pylinkirc import conf, eventloop
 from pylinkirc.classes import *
 from pylinkirc.log import log
 from pylinkirc.protocols.ts6_common import TS6BaseProtocol
@@ -415,18 +414,16 @@ class InspIRCdProtocol(TS6BaseProtocol):
 
         # Endburst delay clutter
 
-        def endburstf():
+        async def endburstf():
             # Delay ENDBURST by X seconds if requested.
-            if self._aborted.wait(self._endburst_delay):
+            if await eventloop.to_thread(self._aborted.wait, self._endburst_delay):
                 # We managed to catch the abort flag before sending ENDBURST, so break
                 log.debug('(%s) stopping endburstf() for %s as aborted was set', self.name, sid)
                 return
-            self._send_with_prefix(sid, 'ENDBURST')
+            await eventloop.to_thread(self._send_with_prefix, sid, 'ENDBURST')
 
         if self._endburst_delay:
-            t = threading.Thread(target=endburstf, name="protocols/inspircd delayed ENDBURST thread for %s@%s" % (sid, self.name))
-            t.daemon = True
-            t.start()
+            eventloop.create_task(endburstf(), name="protocols/inspircd delayed ENDBURST task for %s@%s" % (sid, self.name))
         else:  # Else, send burst immediately
             self._send_with_prefix(sid, 'ENDBURST')
         return sid
