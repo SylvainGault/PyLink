@@ -8,7 +8,8 @@ import threading
 from pylinkirc import world
 from pylinkirc.log import log
 
-__all__ = ['register', 'unregister', 'start', 'create_task', 'to_thread']
+__all__ = ['register', 'unregister', 'start', 'create_task',
+           'create_delayed_task', 'to_thread']
 
 
 SELECT_TIMEOUT = 0.5
@@ -64,6 +65,17 @@ def create_task(coro, name=None):
     the event loop. Return immediately.
     """
     return asyncio.run_coroutine_threadsafe(coro, loop)
+
+def create_delayed_task(coro, secs, name=None):
+    """
+    Create and schedule a task that wait for an amount of seconds and run the
+    coroutine. Return immediately.
+    """
+    async def _task():
+        await asyncio.sleep(secs)
+        await coro
+
+    return create_task(_task(), name)
 
 async def to_thread(func, *args, **kwargs):
     """
