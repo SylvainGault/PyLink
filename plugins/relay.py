@@ -6,7 +6,7 @@ import threading
 import time
 from collections import defaultdict
 
-from pylinkirc import conf, structures, utils, world
+from pylinkirc import conf, eventloop, structures, utils, world
 from pylinkirc.coremods import permissions
 from pylinkirc.log import log
 
@@ -51,21 +51,20 @@ default_oper_permissions = {"$ircop": ['relay.create', 'relay.destroy', 'relay.l
 def initialize_all(irc):
     """Initializes all relay channels for the given IRC object."""
 
-    def _initialize_all():
+    async def _initialize_all():
         for chanpair, entrydata in db.items():
             network, channel = chanpair
 
             # Initialize all channels that are relevant to the called network (i.e. channels either hosted there or a relay leaf channels)
             if network == irc.name:
-                initialize_channel(irc, channel)
+                await eventloop.to_thread(initialize_channel, irc, channel)
             for link in entrydata['links']:
                 network, channel = link
                 if network == irc.name:
-                    initialize_channel(irc, channel)
+                    await eventloop.to_thread(initialize_channel, irc, channel)
 
-    t = threading.Thread(target=_initialize_all, daemon=True,
-                         name='relay initialize_all thread from network %r' % irc.name)
-    t.start()
+    eventloop.create_task(_initialize_all(),
+                          name='relay initialize_all task from network %r' % irc.name)
 
 def main(irc=None):
     """Main function, called during plugin loading at start."""
