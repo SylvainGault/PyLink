@@ -278,6 +278,10 @@ class IRCCommonProtocol(IRCNetwork):
         """Sends a RFC1459-style raw command from the given sender."""
         self.send(':%s %s' % (self._expandPUID(source), msg), **kwargs)
 
+    async def _asend_with_prefix(self, source, msg, **kwargs):
+        """Sends a RFC1459-style raw command from the given sender."""
+        await self.asend(':%s %s' % (self._expandPUID(source), msg), **kwargs)
+
 class IRCS2SProtocol(IRCCommonProtocol):
     COMMAND_TOKENS = {}
 

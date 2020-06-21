@@ -2108,6 +2108,9 @@ class IRCNetwork(PyLinkNetworkCoreWithUtils):
         else:
             self._send(data)
 
+    async def asend(self, data, queue=True):
+        await eventloop.to_thread(self.send, data, queue)
+
     async def _process_queue(self):
         """Loop to process outgoing queue data."""
         while True:

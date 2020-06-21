@@ -179,6 +179,9 @@ class P10Protocol(IRCS2SProtocol):
     def _send_with_prefix(self, source, text, **kwargs):
         self.send("%s %s" % (source, text), **kwargs)
 
+    async def _asend_with_prefix(self, source, text, **kwargs):
+        await self.asend("%s %s" % (source, text), **kwargs)
+
     @staticmethod
     def access_sort(key):
         """
