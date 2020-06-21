@@ -408,12 +408,13 @@ class IRCS2SProtocol(IRCCommonProtocol):
         self._send_with_prefix(client, msg)
         self.handle_part(client, 'PART', [channel])
 
-    def _ping_uplink(self):
+    async def _ping_uplink(self):
         """Sends a PING to the uplink.
 
         This is mostly used by PyLink internals to check whether the remote link is up."""
         if self.sid and self.connected.is_set():
-            self._send_with_prefix(self.sid, 'PING %s' % self._expandPUID(self.uplink))
+            uplinkuid = self._expandPUID(self.uplink)
+            await self._asend_with_prefix(self.sid, 'PING %s' % uplinkuid)
 
     def quit(self, numeric, reason):
         """Quits a PyLink client."""

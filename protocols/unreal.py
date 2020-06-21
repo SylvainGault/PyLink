@@ -249,10 +249,12 @@ class UnrealProtocol(TS6BaseProtocol):
 
         self.updateTS(server, channel, ts, changedmodes)
 
-    def _ping_uplink(self):
+    async def _ping_uplink(self):
         """Sends a PING to the uplink."""
         if self.sid and self.uplink:
-            self._send_with_prefix(self.sid, 'PING %s %s' % (self.get_friendly_name(self.sid), self.get_friendly_name(self.uplink)))
+            myname = self.get_friendly_name(self.sid)
+            upname = self.get_friendly_name(self.uplink)
+            await self._asend_with_prefix(self.sid, 'PING %s %s' % (myname, upname))
 
     def mode(self, numeric, target, modes, ts=None):
         """

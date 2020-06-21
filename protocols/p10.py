@@ -541,10 +541,10 @@ class P10Protocol(IRCS2SProtocol):
         self._send_with_prefix(client, msg)
         self.handle_part(client, 'PART', [channel])
 
-    def _ping_uplink(self):
+    async def _ping_uplink(self):
         """Sends a PING to the uplink."""
         if self.sid:
-            self._send_with_prefix(self.sid, 'G %s' % self.sid)
+            await self._asend_with_prefix(self.sid, 'G %s' % self.sid)
 
     def quit(self, numeric, reason):
         """Quits a PyLink client."""

@@ -1739,7 +1739,7 @@ class IRCNetwork(PyLinkNetworkCoreWithUtils):
 
     async def _schedule_ping(self):
         """Schedules periodic pings in a loop."""
-        await eventloop.to_thread(self._ping_uplink)
+        await self._ping_uplink()
 
         if self._aborted.is_set():
             return

@@ -391,23 +391,23 @@ class ClientbotWrapperProtocol(ClientbotBaseProtocol, IRCCommonProtocol):
         else:
             super().nick(source, newnick)
 
-    def _ping_uplink(self):
+    async def _ping_uplink(self):
         """
         Sends a PING to the uplink.
         """
         if self.uplink:
-            self.send('PING %s' % self.get_friendly_name(self.uplink))
+            await self.asend('PING %s' % self.get_friendly_name(self.uplink))
 
             # Poll WHO periodically to figure out any ident/host/away status changes.
             for channel in self.pseudoclient.channels:
-                self._send_who(channel)
+                await eventloop.to_thread(self._send_who, channel)
 
             # Join persistent channels if always_autorejoin is enabled and there are any we're not in
             if self.serverdata.get('always_autorejoin') and self.has_cap('can-manage-bot-channels'):
                 for channel in world.services['pylink'].get_persistent_channels(self):
                     if channel not in self.pseudoclient.channels:
                         log.info('(%s) Attempting to rejoin %s', self.name, channel)
-                        self.join(self.pseudoclient.uid, channel)
+                        await eventloop.to_thread(self.join, self.pseudoclient.uid, channel)
 
     def part(self, source, channel, reason=''):
         """STUB: Parts a user from a channel."""

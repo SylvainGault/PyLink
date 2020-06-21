@@ -5,7 +5,7 @@ ts6.py: PyLink protocol module for TS6-based IRCds (charybdis, elemental-ircd).
 import re
 import time
 
-from pylinkirc import conf, eventloop, utils
+from pylinkirc import conf, utils
 from pylinkirc.classes import *
 from pylinkirc.log import log
 from pylinkirc.protocols.ts6_common import TS6BaseProtocol
@@ -420,7 +420,7 @@ class TS6Protocol(TS6BaseProtocol):
 
         # Finally, end all the initialization with a PING - that's Charybdis'
         # way of saying end-of-burst :)
-        await eventloop.to_thread(self._ping_uplink)
+        await self._ping_uplink()
 
     def handle_pass(self, numeric, command, args):
         """
