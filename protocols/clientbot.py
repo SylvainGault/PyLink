@@ -10,7 +10,7 @@ import base64
 import string
 import time
 
-from pylinkirc import utils, world
+from pylinkirc import eventloop, utils, world
 from pylinkirc.classes import *
 from pylinkirc.log import log
 from pylinkirc.protocols.ircs2s_common import *
@@ -240,16 +240,16 @@ class ClientbotWrapperProtocol(ClientbotBaseProtocol, IRCCommonProtocol):
 
         self.hook_map = {'ACCOUNT': 'CLIENT_SERVICES_LOGIN'}
 
-    def post_connect(self):
+    async def post_connect(self):
         """Initializes a connection to a server."""
         # (Re)initialize counter-based pseudo UID generators
-        super().post_connect()
+        await super().post_connect()
         self.uidgen = PUIDGenerator('PUID')
         self.sidgen = PUIDGenerator('ClientbotInternalSID')
 
         self.has_eob = False
         ts = self.start_ts
-        f = lambda text: self.send(text, queue=False)
+        async def f(text): await self.asend(text, queue=False)
 
         # Enumerate our own server
         self.sid = self.sidgen.next_sid()
@@ -263,9 +263,9 @@ class ClientbotWrapperProtocol(ClientbotBaseProtocol, IRCCommonProtocol):
 
         sendpass = self.serverdata.get("sendpass")
         if sendpass:
-            f('PASS %s' % sendpass)
+            await f('PASS %s' % sendpass)
 
-        f('CAP LS 302')
+        await f('CAP LS 302')
 
         # Start a timer to call CAP END if registration freezes (e.g. if AUTHENTICATE for SASL is
         # never replied to).
@@ -285,8 +285,8 @@ class ClientbotWrapperProtocol(ClientbotBaseProtocol, IRCCommonProtocol):
         ident = sbot.get_ident(self)
         realname = sbot.get_realname(self)
 
-        f('NICK %s' % nick)
-        f('USER %s 8 * :%s' % (ident, realname))
+        await f('NICK %s' % nick)
+        await f('USER %s 8 * :%s' % (ident, realname))
         self.pseudoclient = User(self, nick, int(time.time()),
                                  self.uidgen.next_uid(prefix='@ClientbotInternal'), self.sid,
                                  ident=ident, realname=realname, host=self.hostname())

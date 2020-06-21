@@ -387,7 +387,7 @@ class UnrealProtocol(TS6BaseProtocol):
 
     ### HANDLERS
 
-    def post_connect(self):
+    async def post_connect(self):
         """Initializes a connection to a server."""
         ts = self.start_ts
         self.prefixmodes = {'q': '~', 'a': '&', 'o': '@', 'h': '%', 'v': '+'}
@@ -395,10 +395,10 @@ class UnrealProtocol(TS6BaseProtocol):
         # Track usages of legacy (Unreal 3.2) nicks.
         self.legacy_uidgen = PUIDGenerator('U32user')
 
-        f = self.send
+        f = self.asend
         host = self.serverdata["hostname"]
 
-        f('PASS :%s' % self.serverdata["sendpass"])
+        await f('PASS :%s' % self.serverdata["sendpass"])
         # https://github.com/unrealircd/unrealircd/blob/2f8cb55e/doc/technical/protoctl.txt
         # We support the following protocol features:
         # SJOIN - supports SJOIN for user introduction
@@ -417,11 +417,11 @@ class UnrealProtocol(TS6BaseProtocol):
         #       not work for any UnrealIRCd 3.2 users.
         # ESVID - Supports account names in services stamps instead of just the signon time.
         #         AFAIK this doesn't actually affect services' behaviour?
-        f('PROTOCTL SJOIN SJ3 NOQUIT NICKv2 VL UMODE2 PROTOCTL NICKIP EAUTH=%s SID=%s VHP ESVID' % (self.serverdata["hostname"], self.sid))
+        await f('PROTOCTL SJOIN SJ3 NOQUIT NICKv2 VL UMODE2 PROTOCTL NICKIP EAUTH=%s SID=%s VHP ESVID' % (self.serverdata["hostname"], self.sid))
         sdesc = self.serverdata.get('serverdesc') or conf.conf['pylink']['serverdesc']
-        f('SERVER %s 1 U%s-h6e-%s :%s' % (host, self.proto_ver, self.sid, sdesc))
+        await f('SERVER %s 1 U%s-h6e-%s :%s' % (host, self.proto_ver, self.sid, sdesc))
 
-        self._send_with_prefix(self.sid, 'EOS')
+        await self._asend_with_prefix(self.sid, 'EOS')
 
         # Extban definitions
         self.extbans_acting = {'quiet': '~q:',

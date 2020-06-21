@@ -448,31 +448,32 @@ class InspIRCdProtocol(TS6BaseProtocol):
         log.debug('(%s) _post_disconnect: clearing _modsupport entries. Last: %s', self.name, self._modsupport)
         self._modsupport.clear()
 
-    def post_connect(self):
+    async def post_connect(self):
         """Initializes a connection to a server."""
         ts = self.start_ts
 
-        f = self.send
-        f('CAPAB START %s' % self.proto_ver)
-        f('CAPAB CAPABILITIES :PROTOCOL=%s' % self.proto_ver)
-        f('CAPAB END')
+        f = self.asend
+        await f('CAPAB START %s' % self.proto_ver)
+        await f('CAPAB CAPABILITIES :PROTOCOL=%s' % self.proto_ver)
+        await f('CAPAB END')
 
         host = self.serverdata["hostname"]
-        f('SERVER {host} {Pass} 0 {sid} :{sdesc}'.format(host=host,
-          Pass=self.serverdata["sendpass"], sid=self.sid,
-          sdesc=self.serverdata.get('serverdesc') or conf.conf['pylink']['serverdesc']))
+        pass_ = self.serverdata["sendpass"]
+        sdesc = self.serverdata.get('serverdesc', conf.conf['pylink']['serverdesc'])
+        await f('SERVER {host} {Pass} 0 {sid} :{sdesc}'.format(host=host, Pass=pass_,
+                                                               sid=self.sid, sdesc=sdesc))
 
-        self._send_with_prefix(self.sid, 'BURST %s' % ts)
+        await self._asend_with_prefix(self.sid, 'BURST %s' % ts)
 
         # InspIRCd sends VERSION data on link, instead of when requested by a client.
         if self.proto_ver >= 1205:
             verstr = self.version()
             for version_type in {'version', 'rawversion'}:
-                self._send_with_prefix(self.sid, 'SINFO %s :%s' % (version_type, verstr.split(' ', 1)[0]))
-            self._send_with_prefix(self.sid, 'SINFO fullversion :%s' % verstr)
+                await self._asend_with_prefix(self.sid, 'SINFO %s :%s' % (version_type, verstr.split(' ', 1)[0]))
+            await self._asend_with_prefix(self.sid, 'SINFO fullversion :%s' % verstr)
         else:
-            self._send_with_prefix(self.sid, 'VERSION :%s' % self.version())
-        self._send_with_prefix(self.sid, 'ENDBURST')
+            await self._asend_with_prefix(self.sid, 'VERSION :%s' % self.version())
+        await self._asend_with_prefix(self.sid, 'ENDBURST')
 
         # Extban definitions
         self.extbans_acting = {'quiet': 'm:', 'ban_nonick': 'N:', 'ban_blockcolor': 'c:',

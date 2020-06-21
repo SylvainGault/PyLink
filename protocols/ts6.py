@@ -5,7 +5,7 @@ ts6.py: PyLink protocol module for TS6-based IRCds (charybdis, elemental-ircd).
 import re
 import time
 
-from pylinkirc import conf, utils
+from pylinkirc import conf, eventloop, utils
 from pylinkirc.classes import *
 from pylinkirc.log import log
 from pylinkirc.protocols.ts6_common import TS6BaseProtocol
@@ -298,11 +298,11 @@ class TS6Protocol(TS6BaseProtocol):
 
     ### Core / handlers
 
-    def post_connect(self):
+    async def post_connect(self):
         """Initializes a connection to a server."""
         ts = self.start_ts
 
-        f = self.send
+        f = self.asend
 
         # Base TS6 mode set from ratbox.
         self.cmodes.update({'sslonly': 'S', 'noknock': 'p',
@@ -391,7 +391,7 @@ class TS6Protocol(TS6BaseProtocol):
                 self.extbans_matching[newk] = '$~' + v[1:]
 
         # https://github.com/grawity/irc-docs/blob/master/server/ts6.txt#L55
-        f('PASS %s TS 6 %s' % (self.serverdata["sendpass"], self.sid))
+        await f('PASS %s TS 6 %s' % (self.serverdata["sendpass"], self.sid))
 
         # We request the following capabilities:
 
@@ -411,16 +411,16 @@ class TS6Protocol(TS6BaseProtocol):
         #        does this actually do anything?
         # EOPMOD: supports ETB (extended TOPIC burst) and =#channel messages for opmoderated +z
         # KLN: supports remote KLINEs
-        f('CAPAB :QS ENCAP EX CHW IE KNOCK SAVE SERVICES TB EUID RSFNC EOPMOD SAVETS_100 KLN')
+        await f('CAPAB :QS ENCAP EX CHW IE KNOCK SAVE SERVICES TB EUID RSFNC EOPMOD SAVETS_100 KLN')
 
         sdesc = self.serverdata.get('serverdesc') or conf.conf['pylink']['serverdesc']
         if self.serverdata.get('hidden', False):
             sdesc = '(H) ' + sdesc
-        f('SERVER %s 0 :%s' % (self.serverdata["hostname"], sdesc))
+        await f('SERVER %s 0 :%s' % (self.serverdata["hostname"], sdesc))
 
         # Finally, end all the initialization with a PING - that's Charybdis'
         # way of saying end-of-burst :)
-        self._ping_uplink()
+        await eventloop.to_thread(self._ping_uplink)
 
     def handle_pass(self, numeric, command, args):
         """

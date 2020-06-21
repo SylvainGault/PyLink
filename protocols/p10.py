@@ -818,11 +818,12 @@ class P10Protocol(IRCS2SProtocol):
 
     ### HANDLERS
 
-    def post_connect(self):
+    async def post_connect(self):
         """Initializes a connection to a server."""
         ts = self.start_ts
 
-        self.send("PASS :%s" % self.serverdata["sendpass"])
+        f = self.asend
+        await f("PASS :%s" % self.serverdata["sendpass"])
 
         # {7S} *** SERVER
 
@@ -900,8 +901,8 @@ class P10Protocol(IRCS2SProtocol):
             self.prefixmodes['h'] = '%'
         self.cmodes.update(cmodes)
 
-        self.send('SERVER %s 1 %s %s J10 %s]]] +s6 :%s' % (name, ts, ts, sid, desc))
-        self._send_with_prefix(sid, "EB")
+        await f('SERVER %s 1 %s %s J10 %s]]] +s6 :%s' % (name, ts, ts, sid, desc))
+        await self._asend_with_prefix(sid, "EB")
 
     def handle_server(self, source, command, args):
         """Handles incoming server introductions."""

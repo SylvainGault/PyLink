@@ -1917,7 +1917,7 @@ class IRCNetwork(PyLinkNetworkCoreWithUtils):
             self.sid = self.serverdata.get("sid")
             # All our checks passed, get the protocol module to connect and run the listen
             # loop. This also updates any SID values should the protocol module do so.
-            await eventloop.to_thread(self.post_connect)
+            await self.post_connect()
 
             log.info('(%s) Enumerating our own SID %s', self.name, self.sid)
             host = self.hostname()

@@ -21,10 +21,10 @@ class HybridProtocol(TS6Protocol):
         self.hook_map = {'EOB': 'ENDBURST', 'TBURST': 'TOPIC', 'SJOIN': 'JOIN'}
         self.protocol_caps -= {'slash-in-hosts'}
 
-    def post_connect(self):
+    async def post_connect(self):
         """Initializes a connection to a server."""
         ts = self.start_ts
-        f = self.send
+        f = self.asend
 
         # https://github.com/grawity/irc-docs/blob/master/server/ts6.txt#L80
         # Note: according to hybrid source code, +p is paranoia, noknock,
@@ -66,7 +66,7 @@ class HybridProtocol(TS6Protocol):
         self.prefixmodes = {'o': '@', 'h': '%', 'v': '+'}
 
         # https://github.com/grawity/irc-docs/blob/master/server/ts6.txt#L55
-        f('PASS %s TS 6 %s' % (self.serverdata["sendpass"], self.sid))
+        await f('PASS %s TS 6 %s' % (self.serverdata["sendpass"], self.sid))
 
         # We request the following capabilities (for hybrid):
 
@@ -85,13 +85,14 @@ class HybridProtocol(TS6Protocol):
         # CHW: Can do channel wall (@#)
         # CLUSTER: Supports server clustering
         # EOB: Supports EOB (end of burst) command
-        f('CAPAB :TBURST DLN KNOCK UNDLN UNKLN KLN ENCAP IE EX HOPS CHW SVS CLUSTER EOB QS')
+        await f('CAPAB :TBURST DLN KNOCK UNDLN UNKLN KLN ENCAP IE EX HOPS CHW SVS CLUSTER EOB QS')
 
-        f('SERVER %s 0 :%s' % (self.serverdata["hostname"],
-                               self.serverdata.get('serverdesc') or conf.conf['pylink']['serverdesc']))
+        hostname = self.serverdata["hostname"]
+        sdesc = self.serverdata.get('serverdesc', conf.conf['pylink']['serverdesc'])
+        await f('SERVER %s 0 :%s' % (hostname, sdesc))
 
         # send endburst now
-        self.send(':%s EOB' % (self.sid,))
+        await f(':%s EOB' % self.sid)
 
     def spawn_client(self, nick, ident='null', host='null', realhost=None, modes=set(),
             server=None, ip='0.0.0.0', realname=None, ts=None, opertype=None,

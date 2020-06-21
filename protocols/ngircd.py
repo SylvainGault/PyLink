@@ -41,13 +41,15 @@ class NgIRCdProtocol(IRCS2SProtocol):
 
     ### Commands
 
-    def post_connect(self):
-        self.send('PASS %s 0210-IRC+ PyLink|%s:CHLMoX' % (self.serverdata['sendpass'], __version__))
+    async def post_connect(self):
+        f = self.asend
+        await f('PASS %s 0210-IRC+ PyLink|%s:CHLMoX' % (self.serverdata['sendpass'], __version__))
 
         # Note: RFC 2813 mandates another server token value after the hopcount (1), but ngIRCd
         # doesn't follow that behaviour per https://github.com/ngircd/ngircd/issues/224
-        self.send("SERVER %s 1 :%s" % (self.serverdata['hostname'],
-                                       self.serverdata.get('serverdesc') or conf.conf['pylink']['serverdesc']))
+        hostname = self.serverdata['hostname']
+        sdesc = self.serverdata.get('serverdesc', conf.conf['pylink']['serverdesc'])
+        await f("SERVER %s 1 :%s" % (hostname, sdesc))
 
         self._uidgen = PUIDGenerator('PUID')
 
