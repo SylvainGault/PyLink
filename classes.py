@@ -2033,7 +2033,7 @@ class IRCNetwork(PyLinkNetworkCoreWithUtils):
 
         return hook_args
 
-    def _run_irc(self):
+    async def _run_irc(self):
         """
         Message handler, called when select() has data to read.
         """
@@ -2043,6 +2043,7 @@ class IRCNetwork(PyLinkNetworkCoreWithUtils):
 
         data = bytearray()
         try:
+            # The socket is non-blocking
             data = self._socket.recv(2048)
         except (BlockingIOError, ssl.SSLWantReadError, ssl.SSLWantWriteError):
             log.debug('(%s) No data to read, trying again later...', self.name, exc_info=True)
@@ -2057,14 +2058,14 @@ class IRCNetwork(PyLinkNetworkCoreWithUtils):
         self._buffer += data
         if not data:
             self._log_connection_error('(%s) Connection lost, disconnecting.', self.name)
-            self.disconnect()
+            await eventloop.to_thread(self.disconnect)
             return
 
         while b'\n' in self._buffer:
             line, self._buffer = self._buffer.split(b'\n', 1)
             line = line.strip(b'\r')
             line = line.decode(self.encoding, "replace")
-            self.parse_irc_command(line)
+            await eventloop.to_thread(self.parse_irc_command, line)
 
         # Update the last message received time
         self.lastping = time.time()

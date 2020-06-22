@@ -3,7 +3,6 @@ Network streams handling driver using the asyncio module.
 """
 
 import asyncio
-import threading
 
 from pylinkirc import world
 from pylinkirc.log import log
@@ -30,8 +29,7 @@ def _process_conn(irc):
     """
     try:
         if not irc._aborted.is_set():
-            t = threading.Thread(target=irc._run_irc, name="_run_irc for %s" % irc.name)
-            t.start()
+            create_task(irc._run_irc(), name="_run_irc for %s" % irc.name)
     except:
         log.exception('Error in network event loop:')
 
