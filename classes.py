@@ -584,7 +584,7 @@ class PyLinkNetworkCore(structures.CamelCaseToSnakeCase):
             log.error("(%s) Configuration error: %s", self.name, e)
             raise
 
-    def _run_autoconnect(self):
+    async def _run_autoconnect(self):
         """Blocks for the autoconnect time and returns True if autoconnect is enabled."""
         if world.shutting_down.is_set():
             log.debug('(%s) _run_autoconnect: aborting autoconnect attempt since we are shutting down.', self.name)
@@ -612,7 +612,7 @@ class PyLinkNetworkCore(structures.CamelCaseToSnakeCase):
             # Compared to time.sleep(), this allows us to stop connections quicker if we
             # break while while for autoconnect.
             self._aborted.clear()
-            self._aborted.wait(autoconnect)
+            await eventloop.to_thread(self._aborted.wait, autoconnect)
 
             # Store in the local state what the autoconnect multiplier currently is.
             self.autoconnect_active_multiplier *= autoconnect_multiplier
@@ -1995,7 +1995,7 @@ class IRCNetwork(PyLinkNetworkCoreWithUtils):
             # delay has passed, if autoconnect is disabled. We do not want it to
             # block whatever is calling disconnect() though, so we run it in a new
             # thread.
-            if await eventloop.to_thread(self._run_autoconnect):
+            if await self._run_autoconnect():
                 self.connect()
 
         if self not in world.networkobjects.values():
