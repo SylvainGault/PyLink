@@ -2009,7 +2009,7 @@ class IRCNetwork(PyLinkNetworkCoreWithUtils):
     def handle_events(self, line):
         raise NotImplementedError
 
-    def parse_irc_command(self, line):
+    async def parse_irc_command(self, line):
         """Sends a command to the protocol module."""
         log.debug("(%s) <- %s", self.name, line)
         if not line:
@@ -2017,11 +2017,11 @@ class IRCNetwork(PyLinkNetworkCoreWithUtils):
             return
 
         try:
-            hook_args = self.handle_events(line)
+            hook_args = await eventloop.to_thread(self.handle_events, line)
         except Exception:
             log.exception('(%s) Caught error in handle_events, disconnecting!', self.name)
             log.error('(%s) The offending line was: <- %s', self.name, line)
-            self.disconnect()
+            await eventloop.to_thread(self.disconnect)
             return
         # Only call our hooks if there's data to process. Handlers that support
         # hooks will return a dict of parsed arguments, which can be passed on
@@ -2029,7 +2029,7 @@ class IRCNetwork(PyLinkNetworkCoreWithUtils):
         # something like: {'channel': '#whatever', 'users': ['UID1', 'UID2',
         # 'UID3']}, etc.
         if hook_args is not None:
-            self.call_hooks(hook_args)
+            await eventloop.to_thread(self.call_hooks, hook_args)
 
         return hook_args
 
@@ -2065,7 +2065,7 @@ class IRCNetwork(PyLinkNetworkCoreWithUtils):
             line, self._buffer = self._buffer.split(b'\n', 1)
             line = line.strip(b'\r')
             line = line.decode(self.encoding, "replace")
-            await eventloop.to_thread(self.parse_irc_command, line)
+            await self.parse_irc_command(line)
 
         # Update the last message received time
         self.lastping = time.time()

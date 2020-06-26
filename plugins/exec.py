@@ -6,7 +6,7 @@ import pprint
 # easier to access through eval and exec.
 import threading
 
-from pylinkirc import utils, world
+from pylinkirc import eventloop, utils, world
 from pylinkirc.coremods import permissions
 from pylinkirc.log import log
 
@@ -148,7 +148,13 @@ def inject(irc, source, args):
 
     log.info('(%s) Injecting raw text %r into protocol module for %s', irc.name,
              args, irc.get_hostmask(source))
-    irc.reply(repr(irc.parse_irc_command(args)))
+
+    def f():
+        res = eventloop.run_until_complete(irc.parse_irc_command(args))
+        eventloop.callback(irc.reply, repr(res))
+
+    thread = threading.Thread(target=f)
+    thread.start()
 
 @utils.add_cmd
 def threadinfo(irc, source, args):
