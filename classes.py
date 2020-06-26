@@ -2006,7 +2006,7 @@ class IRCNetwork(PyLinkNetworkCoreWithUtils):
         else:
             log.debug('(%s) Ignoring attempt to reschedule reconnect as one is in progress.', self.name)
 
-    def handle_events(self, line):
+    async def handle_events(self, line):
         raise NotImplementedError
 
     async def parse_irc_command(self, line):
@@ -2017,7 +2017,7 @@ class IRCNetwork(PyLinkNetworkCoreWithUtils):
             return
 
         try:
-            hook_args = await eventloop.to_thread(self.handle_events, line)
+            hook_args = await self.handle_events(line)
         except Exception:
             log.exception('(%s) Caught error in handle_events, disconnecting!', self.name)
             log.error('(%s) The offending line was: <- %s', self.name, line)

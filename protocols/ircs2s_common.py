@@ -5,7 +5,7 @@ ircs2s_common.py: Common base protocol class with functions shared by TS6 and P1
 import re
 import time
 
-from pylinkirc import conf
+from pylinkirc import conf, eventloop
 from pylinkirc.classes import IRCNetwork, ProtocolError
 from pylinkirc.log import log
 
@@ -293,7 +293,7 @@ class IRCS2SProtocol(IRCCommonProtocol):
         # Alias
         self.handle_squit = self._squit
 
-    def handle_events(self, data):
+    async def handle_events(self, data):
         """Event handler for RFC1459-like protocols.
 
         This passes most commands to the various handle_ABCD() functions
@@ -357,7 +357,7 @@ class IRCS2SProtocol(IRCCommonProtocol):
         except AttributeError:  # Unhandled command
             pass
         else:
-            parsed_args = func(sender, command, args)
+            parsed_args = await eventloop.to_thread(func, sender, command, args)
             if parsed_args is not None:
                 if tags:
                     parsed_args['tags'] = tags  # Add message tags to this hook payload.

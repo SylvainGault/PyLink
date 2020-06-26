@@ -450,7 +450,7 @@ class ClientbotWrapperProtocol(ClientbotBaseProtocol, IRCCommonProtocol):
         if account != self.users[uid].services_account:
             self.call_hooks([uid, 'CLIENT_SERVICES_LOGIN', {'text': account}])
 
-    def handle_events(self, data):
+    async def handle_events(self, data):
         """Event handler for the RFC1459/2812 (clientbot) protocol."""
         data = data.split(" ")
 
@@ -479,7 +479,7 @@ class ClientbotWrapperProtocol(ClientbotBaseProtocol, IRCCommonProtocol):
                 # Sender is a server name. XXX: make this check more foolproof
                 assert '@' not in sender, "Incoming server name %r clashes with a PUID!" % sender
                 if sender not in self.servers:
-                    self.spawn_server(sender, internal=False)
+                    await eventloop.to_thread(self.spawn_server, sender, internal=False)
                 idsource = sender
             else:
                 # Sender is a either a nick or a nick!user@host prefix. Split it into its relevant parts.
