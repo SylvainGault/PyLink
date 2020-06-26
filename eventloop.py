@@ -84,3 +84,18 @@ async def to_thread(func, *args, **kwargs):
     def wrap():
         return func(*args, **kwargs)
     return await loop.run_in_executor(None, wrap)
+
+def run_until_complete(coro):
+    if not loop.is_running():
+        log.warning("run_until_complete: starting loop unexpectely")
+        return loop.run_until_complete(coro)
+
+    if asyncio._get_running_loop() != loop:
+        # No loop in the current thread, just schedule the coroutine and wait
+        fut = asyncio.run_coroutine_threadsafe(coro, loop)
+        return fut.result()
+
+    raise RuntimeError("run_until_complete: Event loop already busy")
+
+def callback(fun, *args):
+    loop.call_soon_threadsafe(fun)
