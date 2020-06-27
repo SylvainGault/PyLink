@@ -424,12 +424,12 @@ class PyLinkNetworkCore(structures.CamelCaseToSnakeCase):
                           hook_args)
                 continue
 
-    def call_command(self, source, text):
+    async def call_command(self, source, text):
         """
         Calls a PyLink bot command. source is the caller's UID, and text is the
         full, unparsed text of the message.
         """
-        world.services['pylink'].call_cmd(self, source, text)
+        await eventloop.to_thread(world.services['pylink'].call_cmd, self, source, text)
 
     def msg(self, target, text, notice=None, source=None, loopback=True, wrap=True):
         """Handy function to send messages/notices to clients. Source
